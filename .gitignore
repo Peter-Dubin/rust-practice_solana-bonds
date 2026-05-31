@@ -1,0 +1,38 @@
+# ── Solana local validator state ────────────────────────────────────────────
+test-ledger/
+.anchor/
+
+# ── Node / npm ───────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# ── Next.js ──────────────────────────────────────────────────────────────────
+web/.next/
+web/out/
+web/build/
+
+# ── TypeScript build output ───────────────────────────────────────────────────
+dist/
+*.tsbuildinfo
+eurocoin-token/dist/
+
+# ── Environment files (contain secrets) ──────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# keep .env.example committed (no secrets, just a template)
+
+# ── Phase 1 CLI runtime artefacts (keypairs + token info) ────────────────────
+eurocoin-token/wallets/
+eurocoin-token/token-info.json
+
+# ── OS / editor junk ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

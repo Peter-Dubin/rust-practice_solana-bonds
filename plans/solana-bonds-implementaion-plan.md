@@ -449,18 +449,18 @@ The frontend look, theme, layout, and component library are **yours to design**.
 ## 11. Verification / Acceptance Checklist
 
 **Setup**
-- [ ] `solana-test-validator` running; `SOLANA_URL` reachable; MongoDB reachable.
+- [x] `solana-test-validator` running; `SOLANA_URL` reachable; MongoDB reachable. *(Atlas M0 free tier — rustsolanabonds cluster)*
 
 **Phase 1 (CLI)**
-- [ ] `npm run dev` creates 4 wallets, airdrops SOL, mints EuroCC + BonoDeuda, writes `token-info.json`.
-- [ ] `npm run balance` prints correct EuroCC/BONO balances.
-- [ ] `npm run compra` moves 1000 EUROCC buyer→issuer and 1 BONO issuer→buyer.
-- [ ] `npm run transfer` moves 1 BONO adquirente1→adquirente2.
-- [ ] `npm run cupon` pays 40 EUROCC per held bond to each holder.
+- [x] `npm run dev` creates 4 wallets, airdrops SOL, mints EuroCC + BonoDeuda, writes `token-info.json`.
+- [x] `npm run balance` prints correct EuroCC/BONO balances.
+- [x] `npm run compra` moves 1000 EUROCC buyer→issuer and 1 BONO issuer→buyer.
+- [x] `npm run transfer` moves 1 BONO adquirente1→adquirente2.
+- [x] `npm run cupon` pays 40 EUROCC per held bond to each holder.
 
 **Phase 2 (Web)**
-- [ ] Register + login work; password stored only as bcrypt hash; session cookie set.
-- [ ] Create wallet stores an **encrypted** private key; client never receives it.
+- [x] Register + login work; password stored only as bcrypt hash; session cookie set.
+- [x] Create wallet stores an **encrypted** private key; client never receives it.
 - [ ] SOL faucet increases SOL balance; SPL faucet increases token balance.
 - [ ] Create a Bono with nominal/coupon/years; `mintAddress` saved on-chain + in DB.
 - [ ] Buy a bond: BONO appears in buyer wallet, stablecoin debited, `bonista` row created.
@@ -472,5 +472,5 @@ The frontend look, theme, layout, and component library are **yours to design**.
 - [ ] Authorization enforced (only issuer pays; only owner signs); no secrets logged.
 
 **Sanity**
-- [ ] A developer could build the system from this file alone — token params, data shapes,
+- [x] A developer could build the system from this file alone — token params, data shapes,
       function contracts, bond math, env vars, and security model are all specified.
