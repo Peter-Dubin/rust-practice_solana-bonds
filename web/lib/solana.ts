@@ -245,25 +245,40 @@ export async function buyToken(
     issuer.publicKey
   );
 
-  // Leg 1: BONO issuer -> buyer
-  await transferTokens(
-    conn,
-    issuer,
-    issuerBonoATA.address,
-    buyerBonoATA.address,
-    BigInt(amount) * 10n ** BigInt(bond.decimals)
-  );
-
-  // Leg 2: stablecoin buyer -> issuer (amount × nominal)
+  // Atomic transaction: both legs succeed or neither does.
+  const bonoUnits = BigInt(amount) * 10n ** BigInt(bond.decimals);
   const priceBaseUnits =
     BigInt(amount) * BigInt(nominal) * 10n ** BigInt(stable.decimals);
-  await transferTokens(
-    conn,
-    buyer,
-    buyerStableATA.address,
-    issuerStableATA.address,
-    priceBaseUnits
+
+  const tx = new Transaction();
+  tx.add(
+    createTransferInstruction(
+      issuerBonoATA.address,
+      buyerBonoATA.address,
+      issuer.publicKey,
+      bonoUnits
+    )
   );
+  tx.add(
+    createTransferInstruction(
+      buyerStableATA.address,
+      issuerStableATA.address,
+      buyer.publicKey,
+      priceBaseUnits
+    )
+  );
+
+  try {
+    const { sendAndConfirmTransaction } = await import("@solana/web3.js");
+    await sendAndConfirmTransaction(conn, tx, [issuer, buyer]);
+  } catch (err) {
+    if (err instanceof SendTransactionError) {
+      throw new Error(
+        `Buy failed: ${(await err.getLogs(conn))?.join(" | ")}`
+      );
+    }
+    throw err;
+  }
 
   // Ledger
   const db = await getDb();

@@ -461,16 +461,210 @@ The frontend look, theme, layout, and component library are **yours to design**.
 **Phase 2 (Web)**
 - [x] Register + login work; password stored only as bcrypt hash; session cookie set.
 - [x] Create wallet stores an **encrypted** private key; client never receives it.
-- [ ] SOL faucet increases SOL balance; SPL faucet increases token balance.
-- [ ] Create a Bono with nominal/coupon/years; `mintAddress` saved on-chain + in DB.
-- [ ] Buy a bond: BONO appears in buyer wallet, stablecoin debited, `bonista` row created.
-- [ ] Bond detail lists bondholders.
-- [ ] Pay coupon transfers `(coupon% × units × nominal)/100` to each holder; tx signature shown;
-      payment history recorded.
-- [ ] Pay nominal transfers full nominal per unit; recorded.
-- [ ] Transfer a bond between two wallets.
-- [ ] Authorization enforced (only issuer pays; only owner signs); no secrets logged.
+- [x] SOL faucet increases SOL balance; SPL faucet increases token balance.
+- [x] Create a Bono with nominal/coupon/years; `mintAddress` saved on-chain + in DB.
+- [x] Buy a bond UI visible (Bond + StableCoin dropdowns, Units, Buy button); buy is atomic (both legs in one tx).
+- [x] Buy a bond: BONO appears in buyer wallet, stablecoin debited, `bonista` row created.
+- [x] Bond detail lists bondholders.
+- [x] Pay coupon transfers `(coupon% × units × nominal)/100` to each holder; tx signature shown; payment history recorded.
+- [x] Pay nominal transfers full nominal per unit; recorded.
+- [x] Transfer a bond between two wallets. *(10 WB bonds sent from User1 → Peter Dubin; WB balance dropped 1000 → 990)*
+- [x] Authorization enforced: issuer-only actions hidden from non-issuers. *(Confirmed: User1 = WB issuer sees buttons; Peter Dubin = non-issuer does not)*
 
 **Sanity**
 - [x] A developer could build the system from this file alone — token params, data shapes,
       function contracts, bond math, env vars, and security model are all specified.
+
+---
+
+## 12. Phase 2 — Demo Workflow (Real-Life Scenario)
+
+> **Purpose.** This section translates the verification checklist into a story-driven walkthrough.
+> Follow it top to bottom to exercise the full bond lifecycle as if you were running a real
+> corporate bond issuance — with exact token numbers at every step so you always know what to
+> expect on screen.
+
+---
+
+### The Story
+
+**GreenTech Corp** is a clean-energy company that needs €1 000 000 to fund a new solar farm.
+Instead of going to a bank, they issue **corporate bonds** on Solana — anyone with a wallet can
+invest, and the bond contract guarantees annual interest payments plus full repayment at maturity.
+
+| Role | Account | Represents |
+|------|---------|-----------|
+| **Peter Dubin** | Issuer / Treasurer | GreenTech Corp — creates tokens, pays coupons, redeems bonds |
+| **User1** | Investor | An individual buying a bond as a savings product |
+
+---
+
+### Tokens used in this demo
+
+| Token | Symbol | Type | Decimals | Meaning |
+|-------|--------|------|----------|---------|
+| Token A | TA | StableCoin | 2 | The payment currency (like a euro stablecoin). 1 TA = 100 base units on-chain. |
+| Work Bond | WB | Bono | 0 | The bond itself. 1 WB = 1 bond. 0 decimals means no fractions — you own whole bonds. |
+
+**Bond economics for WB**
+
+```
+Face value (nominal):  1 000 TA per bond
+Annual interest:       4% of nominal = 40 TA per bond per year
+Term:                  4 years
+```
+
+**Full cash-flow for an investor holding 1 WB for the entire term:**
+
+```
+Day 0  (buy):    −1 000 TA   ← investor pays GreenTech
+Year 1 (coupon): +   40 TA   ← GreenTech pays investor
+Year 2 (coupon): +   40 TA
+Year 3 (coupon): +   40 TA
+Year 4 (coupon): +   40 TA
+Year 4 (nominal):+ 1 000 TA  ← GreenTech returns the face value
+─────────────────────────────
+Net profit:         +160 TA  (16 % total return, 4 % per year)
+```
+
+---
+
+### Step-by-step walkthrough
+
+#### Step 1 — GreenTech sets up (Peter Dubin)
+
+1. Register and log in as **Peter Dubin**.
+2. Go to **My Wallets → + Add wallet**. This is the company treasury wallet.
+3. Click **Faucet 1 SOL** on that wallet (SOL is needed to pay Solana transaction fees).
+4. Go to **Tokens & Bonds → + Create token / bond**:
+   - Type: **StableCoin** | Name: `Token A` | Symbol: `TA` | Decimals: `2` | Supply: `1 000 000`
+   - Issuer wallet: *(auto-filled with your active wallet)*
+   - Click **Create**. The blockchain creates the mint and puts 1 000 000 TA (= 100 000 000 base units) in Peter Dubin's treasury.
+5. Still on **+ Create token / bond**:
+   - Type: **Bono** | Name: `Work Bond` | Symbol: `WB` | Supply: `1 000`
+   - Nominal: `1000` | Coupon %: `4` | Years: `4` | Decimals: locked to `0`
+   - Click **Create**. GreenTech now holds 1 000 WB bonds ready to sell.
+
+> **What happened on-chain:** Two SPL mints were created. Peter Dubin's ATA for TA holds
+> 100 000 000 base units; his ATA for WB holds 1 000 base units (= 1 000 bonds).
+
+---
+
+#### Step 2 — Investor sets up (User1)
+
+6. Register and log in as **User1**.
+7. Go to **My Wallets → + Add wallet**.
+8. Click **Faucet 1 SOL** (User1 also needs SOL for fees).
+9. In the SPL Faucet row, select **TA**, type `2000`, click **Mint**.
+   - Why 2 000? Each bond costs 1 000 TA, so 2 000 gives room to buy 2 bonds and still have change.
+   - On-chain result: User1's TA balance = **2 000 TA = 200 000 base units**.
+
+> **Balance check before buying:**
+> ```
+> User1  TA: 200 000 base units (= 2 000 TA)  ✓ enough
+> User1  WB:       0 base units
+> Peter  WB:   1 000 base units (= 1 000 bonds available)
+> ```
+
+---
+
+#### Step 3 — User1 buys a bond
+
+10. On User1's wallets page, click **Open** on the wallet.
+11. In the **Buy a bond** section:
+    - Bond: `WB` | Pay with: `TA` | Units: `1`
+    - Click **Buy**.
+
+**What happens (atomic, single Solana transaction):**
+
+```
+User1  TA:  −100 000 base units  (= −1 000 TA, the bond price)  → Peter Dubin
+Peter  WB:  −      1 base unit   (= −1 bond)                    → User1
+User1  WB:  +      1 base unit   (= +1 bond)
+```
+
+**Balances after:**
+```
+User1  TA:  100 000 base units  (= 1 000 TA remaining)
+User1  WB:       1 base unit    (= 1 bond owned)
+Peter  TA:  +100 000 base units received (payment)
+Peter  WB:     999 base units   (999 bonds left to sell)
+```
+
+A new **bondholder row** is created in the database: holder = User1's wallet, units = 1.
+
+---
+
+#### Step 4 — GreenTech pays Year 1 coupon (Peter Dubin)
+
+12. Log in as **Peter Dubin**.
+13. Go to **Tokens & Bonds → Detail** on Work Bond (WB).
+14. In **Issuer actions**, click **Pay coupon**.
+
+**Coupon formula:** `4% × 1 bond × 1 000 TA nominal = 40 TA`
+
+```
+Peter  TA:  −4 000 base units   (= −40 TA paid out)  → User1
+User1  TA:  +4 000 base units   (= +40 TA received)
+```
+
+The bondholder row now shows **1 payment**. A transaction signature links to the explorer.
+
+---
+
+#### Step 5 — User1 transfers a bond to Peter Dubin mid-term
+
+15. Log in as **User1**, go to the wallet detail page (Open).
+16. In the **Transfer** section:
+    - Token: `WB` | To address: *(Peter Dubin's wallet address)* | Amount: `1`
+    - Click **Send**.
+
+```
+User1  WB:  −1 base unit  (bond sold / transferred)
+Peter  WB:  +1 base unit  (bond received)
+```
+
+> This simulates a secondary market sale — the bond changes hands before maturity.
+> Note: the bondholder ledger in the DB still records User1 as the original buyer.
+> Coupon and nominal payments use the bondholder ledger, not live on-chain balances —
+> so only holders recorded at the time of each payment receive the transfer.
+
+---
+
+#### Step 6 — GreenTech pays nominal at maturity (Peter Dubin)
+
+17. Log in as **Peter Dubin**, navigate to Work Bond detail.
+18. Click **Pay nominal**.
+
+**Nominal formula:** `1 000 TA × 1 bond held (per bondholder record) = 1 000 TA`
+
+```
+Peter  TA:  −100 000 base units  (= −1 000 TA)  → User1
+User1  TA:  +100 000 base units  (= +1 000 TA received — full face value back)
+```
+
+The bondholder row now shows **2 payments** (1 coupon + 1 nominal).
+
+---
+
+### Final balances (1 coupon + nominal paid, bond transferred mid-term)
+
+| Account | TA (base) | TA (whole) | WB (bonds) |
+|---------|-----------|-----------|------------|
+| User1 | started with 200 000, spent 100 000 on bond, received 4 000 coupon + 100 000 nominal | **204 000** (= 2 040 TA) | 0 (transferred away) |
+| Peter Dubin | received 100 000 from sale, paid 4 000 coupon + 100 000 nominal, received bond back | net −4 000 (paid interest) | 1 (the bond transferred back) |
+
+> **User1's profit: 40 TA** — earned 4% annual interest on a 1-year hold.
+> If held all 4 years without transferring: **+160 TA total (16% return)**.
+
+---
+
+### Quick-reference: what token amounts to use
+
+| Action | Field to fill | Value | Why |
+|--------|--------------|-------|-----|
+| SPL Faucet (TA to investor) | Amount | `2000` | Needs ≥ 1 000 TA per bond (nominal = 1000, decimals = 2 → 100 000 base) |
+| Buy a bond | Units | `1` | 1 WB bond |
+| Transfer bond | Amount | `1` | 1 WB (whole bonds only, decimals = 0) |
+| Pay coupon (auto) | — | — | System calculates: 4% × 1 000 × bonds held = 40 TA per holder |
+| Pay nominal (auto) | — | — | System calculates: 1 000 TA × bonds held per holder |

@@ -2,6 +2,9 @@ import { getTokenById, getBonistas } from "../actions";
 import { getTokenBalance } from "@/lib/solana";
 import { explorerAddress, shortAddress } from "@/lib/explorer";
 import { BondAdminPanel } from "@/components/BondAdminPanel";
+import { getSession } from "@/lib/session";
+import { getDb } from "@/lib/mongodb";
+import { COLLECTIONS, WalletDoc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,16 @@ export default async function BondDetailPage({
           () => "0"
         )
       : "0";
+
+  const session = await getSession();
+  let isIssuer = false;
+  if (session && token.walletAddress) {
+    const db = await getDb();
+    const match = await db
+      .collection<WalletDoc>(COLLECTIONS.wallets)
+      .findOne({ userId: session.userId, address: token.walletAddress });
+    isIssuer = !!match;
+  }
 
   return (
     <div className="space-y-6">
@@ -101,7 +114,7 @@ export default async function BondDetailPage({
         )}
       </section>
 
-      {token.mintAddress && (
+      {token.mintAddress && isIssuer && (
         <BondAdminPanel mintAddress={token.mintAddress} />
       )}
     </div>

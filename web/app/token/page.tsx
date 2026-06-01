@@ -2,11 +2,26 @@ import Link from "next/link";
 import { getTokens } from "./actions";
 import { explorerAddress, shortAddress } from "@/lib/explorer";
 import { CreateTokenForm } from "@/components/CreateTokenForm";
+import { DeleteTokenButton } from "@/components/DeleteTokenButton";
+import { getSession } from "@/lib/session";
+import { getDb } from "@/lib/mongodb";
+import { COLLECTIONS, WalletDoc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function TokensPage() {
   const tokens = await getTokens();
+
+  const session = await getSession();
+  let myWalletAddresses = new Set<string>();
+  if (session) {
+    const db = await getDb();
+    const wallets = await db
+      .collection<WalletDoc>(COLLECTIONS.wallets)
+      .find({ userId: session.userId }, { projection: { address: 1 } })
+      .toArray();
+    myWalletAddresses = new Set(wallets.map((w) => w.address));
+  }
 
   return (
     <div className="space-y-6">
@@ -70,14 +85,19 @@ export default async function TokensPage() {
                   )}
                 </td>
                 <td className="text-right">
-                  {t.tipo === "Bono" && (
-                    <Link
-                      href={`/token/${t._id}`}
-                      className="text-emerald-400 hover:underline"
-                    >
-                      Detail
-                    </Link>
-                  )}
+                  <span className="flex items-center justify-end gap-3">
+                    {t.tipo === "Bono" && (
+                      <Link
+                        href={`/token/${t._id}`}
+                        className="text-emerald-400 hover:underline"
+                      >
+                        Detail
+                      </Link>
+                    )}
+                    {myWalletAddresses.has(t.walletAddress) && (
+                      <DeleteTokenButton tokenId={t._id} />
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}

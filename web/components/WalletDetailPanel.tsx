@@ -28,8 +28,9 @@ export function WalletDetailPanel({
   const [stableMint, setStableMint] = useState(stablecoins[0]?.mintAddress ?? "");
   const [buyAmount, setBuyAmount] = useState(1);
 
-  // Transfer form state
-  const [xferMint, setXferMint] = useState(rows[0]?.mintAddress ?? "");
+  // Transfer form state — only tokens the wallet actually holds
+  const transferable = rows.filter((r) => BigInt(r.balance || "0") > 0n);
+  const [xferMint, setXferMint] = useState(transferable[0]?.mintAddress ?? "");
   const [xferTo, setXferTo] = useState("");
   const [xferAmount, setXferAmount] = useState(1);
 
@@ -171,7 +172,7 @@ export function WalletDetailPanel({
         </section>
       )}
 
-      {rows.length > 0 && (
+      {transferable.length > 0 && (
         <section className="rounded-lg border border-zinc-800 p-4">
           <h2 className="mb-3 font-semibold">Transfer</h2>
           <div className="flex flex-wrap items-end gap-3 text-sm">
@@ -181,7 +182,7 @@ export function WalletDetailPanel({
                 onChange={(e) => setXferMint(e.target.value)}
                 className="rounded bg-zinc-800 px-2 py-1"
               >
-                {rows.map((r) => (
+                {transferable.map((r) => (
                   <option key={r._id} value={r.mintAddress}>
                     {r.symbol}
                   </option>

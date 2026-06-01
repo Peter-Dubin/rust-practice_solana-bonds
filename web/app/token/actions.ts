@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/mongodb";
-import { COLLECTIONS, TokenDoc, BonistaDoc } from "@/lib/types";
+import { COLLECTIONS, TokenDoc, BonistaDoc, WalletDoc } from "@/lib/types";
 import { requireSession } from "@/lib/session";
 import {
   createToken,
@@ -214,6 +214,37 @@ export interface BonistaListItem {
   purchaseDate: string;
   stablecoinUsed: string;
   payments?: { date: string; amount: number }[];
+}
+
+export async function deleteTokenAction(tokenId: string): Promise<{ ok: boolean; message: string }> {
+  const session = await requireSession();
+  const { ObjectId } = await import("mongodb");
+  if (!ObjectId.isValid(tokenId)) return { ok: false, message: "Invalid token id." };
+
+  const db = await getDb();
+
+  const token = await db
+    .collection<TokenDoc>(COLLECTIONS.token)
+    .findOne({ _id: new ObjectId(tokenId) });
+  if (!token) return { ok: false, message: "Token not found." };
+
+  // Only the issuer (wallet owner) may delete.
+  const ownsWallet = await db
+    .collection<WalletDoc>(COLLECTIONS.wallets)
+    .findOne({ userId: session.userId, address: token.walletAddress });
+  if (!ownsWallet) return { ok: false, message: "Only the issuer can delete this token." };
+
+  // Block deletion if bondholders exist.
+  if (token.mintAddress) {
+    const holderCount = await db
+      .collection(COLLECTIONS.bonista)
+      .countDocuments({ tokenMint: token.mintAddress });
+    if (holderCount > 0) return { ok: false, message: "Cannot delete: bondholders exist." };
+  }
+
+  await db.collection(COLLECTIONS.token).deleteOne({ _id: new ObjectId(tokenId) });
+  revalidatePath("/token");
+  return { ok: true, message: "Token deleted." };
 }
 
 export async function getBonistas(mintAddress: string): Promise<BonistaListItem[]> {

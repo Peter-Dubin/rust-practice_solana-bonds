@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createTokenAction } from "@/app/token/actions";
+import { useActiveWallet } from "./ActiveWalletContext";
 
 export function CreateTokenForm() {
   const router = useRouter();
+  const { activeWallet } = useActiveWallet();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -16,11 +18,18 @@ export function CreateTokenForm() {
     symbol: "",
     decimals: 0,
     amount: 1000,
-    walletAddress: "",
+    walletAddress: activeWallet ?? "",
     nominal: 1000,
     porcentajeCupon: 4,
     anos: 4,
   });
+
+  // Keep walletAddress in sync with activeWallet when the modal opens.
+  useEffect(() => {
+    if (open && activeWallet) {
+      setForm((f) => ({ ...f, walletAddress: activeWallet }));
+    }
+  }, [open, activeWallet]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -91,8 +100,9 @@ export function CreateTokenForm() {
             <Input
               label="Decimals"
               type="number"
-              value={form.decimals}
+              value={tipo === "Bono" ? 0 : form.decimals}
               onChange={(v) => set("decimals", Number(v))}
+              disabled={tipo === "Bono"}
             />
             <Input
               label="Initial supply"
@@ -152,12 +162,14 @@ function Input({
   onChange,
   type = "text",
   mono = false,
+  disabled = false,
 }: {
   label: string;
   value: string | number;
   onChange: (v: string) => void;
   type?: string;
   mono?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
@@ -166,9 +178,10 @@ function Input({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         className={`w-full rounded bg-zinc-800 px-3 py-2 text-sm outline-none ${
           mono ? "font-mono text-xs" : ""
-        }`}
+        } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
       />
     </label>
   );
